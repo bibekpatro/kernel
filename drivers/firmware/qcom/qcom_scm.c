@@ -112,9 +112,7 @@ enum qcom_scm_qseecom_tz_cmd_info {
 	QSEECOM_TZ_CMD_INFO_VERSION		= 3,
 };
 
-enum qcom_scm_rsctable_resp_type {
-	RSCTABLE_BUFFER_NOT_SUFFICIENT		= 20,
-};
+#define RSCTABLE_BUFFER_NOT_SUFFICIENT		20
 
 #define QSEECOM_MAX_APP_NAME_SIZE		64
 #define SHMBRIDGE_RESULT_NOTSUPP		4
@@ -564,8 +562,8 @@ static void qcom_scm_set_download_mode(u32 dload_mode)
 }
 
 /**
- * devm_qcom_scm_pas_context_init() - Initialize peripheral authentication service
- *				      context for a given peripheral
+ * devm_qcom_scm_pas_context_alloc() - Allocate peripheral authentication service
+ *				       context for a given peripheral
  *
  * PAS context is device-resource managed, so the caller does not need
  * to worry about freeing the context memory.
@@ -575,12 +573,12 @@ static void qcom_scm_set_download_mode(u32 dload_mode)
  * @mem_phys:	  Subsystem reserve memory start address
  * @mem_size:	  Subsystem reserve memory size
  *
- * Upon successful, returns the PAS context or ERR_PTR() of the error otherwise.
+ * Returns: The new PAS context, or ERR_PTR() on failure.
  */
-struct qcom_scm_pas_context *devm_qcom_scm_pas_context_init(struct device *dev,
-							    u32 pas_id,
-							    phys_addr_t mem_phys,
-							    size_t mem_size)
+struct qcom_scm_pas_context *devm_qcom_scm_pas_context_alloc(struct device *dev,
+							     u32 pas_id,
+							     phys_addr_t mem_phys,
+							     size_t mem_size)
 {
 	struct qcom_scm_pas_context *ctx;
 
@@ -595,7 +593,7 @@ struct qcom_scm_pas_context *devm_qcom_scm_pas_context_init(struct device *dev,
 
 	return ctx;
 }
-EXPORT_SYMBOL_GPL(devm_qcom_scm_pas_context_init);
+EXPORT_SYMBOL_GPL(devm_qcom_scm_pas_context_alloc);
 
 static int __qcom_scm_pas_init_image(u32 pas_id, dma_addr_t mdata_phys,
 				     struct qcom_scm_res *res)
@@ -677,7 +675,7 @@ int qcom_scm_pas_init_image(u32 pas_id, const void *metadata, size_t size,
 	void *mdata_buf;
 	int ret;
 
-	if (ctx && ctx->has_iommu)
+	if (ctx && ctx->use_tzmem)
 		return qcom_scm_pas_prep_and_init_image(ctx, metadata, size);
 
 	/*
@@ -721,7 +719,7 @@ void qcom_scm_pas_metadata_release(struct qcom_scm_pas_context *ctx)
 	if (!ctx->ptr)
 		return;
 
-	if (ctx->has_iommu)
+	if (ctx->use_tzmem)
 		qcom_tzmem_free(ctx->ptr);
 	else
 		dma_free_coherent(__scm->dev, ctx->size, ctx->ptr, ctx->phys);
@@ -771,8 +769,9 @@ disable_clk:
 }
 EXPORT_SYMBOL_GPL(qcom_scm_pas_mem_setup);
 
-static int __qcom_scm_pas_get_rsc_table(u32 pas_id, void *input_rt, size_t input_rt_size,
-					void **output_rt, size_t *output_rt_size)
+static void *__qcom_scm_pas_get_rsc_table(u32 pas_id, void *input_rt_tzm,
+					  size_t input_rt_size,
+					  size_t *output_rt_size)
 {
 	struct qcom_scm_desc desc = {
 		.svc = QCOM_SCM_SVC_PIL,
@@ -782,80 +781,44 @@ static int __qcom_scm_pas_get_rsc_table(u32 pas_id, void *input_rt, size_t input
 		.args[0] = pas_id,
 		.owner = ARM_SMCCC_OWNER_SIP,
 	};
-	void *input_rt_buf, *output_rt_buf;
-	struct resource_table *rsc;
 	struct qcom_scm_res res;
+	void *output_rt_tzm;
 	int ret;
 
-	ret = qcom_scm_clk_enable();
-	if (ret)
-		return ret;
+	output_rt_tzm = qcom_tzmem_alloc(__scm->mempool, *output_rt_size, GFP_KERNEL);
+	if (!output_rt_tzm)
+		return ERR_PTR(-ENOMEM);
 
-	ret = qcom_scm_bw_enable();
-	if (ret)
-		goto disable_clk;
-
-	/*
-	 * TrustZone can not accept buffer as NULL value as argument Hence,
-	 * we need to pass a input buffer indicating that subsystem firmware
-	 * does not have resource table by filling resource table structure.
-	 */
-	if (!input_rt)
-		input_rt_size = sizeof(*rsc);
-
-	input_rt_buf = qcom_tzmem_alloc(__scm->mempool, input_rt_size, GFP_KERNEL);
-	if (!input_rt_buf) {
-		ret = -ENOMEM;
-		goto disable_scm_bw;
-	}
-
-	if (!input_rt) {
-		rsc = input_rt_buf;
-		rsc->num = 0;
-	} else {
-		memcpy(input_rt_buf, input_rt, input_rt_size);
-	}
-
-	output_rt_buf = qcom_tzmem_alloc(__scm->mempool, *output_rt_size, GFP_KERNEL);
-	if (!output_rt_buf) {
-		ret = -ENOMEM;
-		goto free_input_rt_buf;
-	}
-
-	desc.args[1] = qcom_tzmem_to_phys(input_rt_buf);
+	desc.args[1] = qcom_tzmem_to_phys(input_rt_tzm);
 	desc.args[2] = input_rt_size;
-	desc.args[3] = qcom_tzmem_to_phys(output_rt_buf);
+	desc.args[3] = qcom_tzmem_to_phys(output_rt_tzm);
 	desc.args[4] = *output_rt_size;
 
 	/*
 	 * Whether SMC fail or pass, res.result[2] will hold actual resource table
 	 * size.
 	 *
-	 * if passed 'output_rt_size' buffer size is not sufficient to hold the
+	 * If passed 'output_rt_size' buffer size is not sufficient to hold the
 	 * resource table TrustZone sends, response code in res.result[1] as
-	 * RSCTABLE_BUFFER_NOT_SUFFICIENT so that caller can retry this SMC call with
-	 * output_rt buffer with res.result[2] size.
+	 * RSCTABLE_BUFFER_NOT_SUFFICIENT so that caller can retry this SMC call
+	 * with output_rt_tzm buffer with res.result[2] size however, It should not
+	 * be of unresonable size.
 	 */
 	ret = qcom_scm_call(__scm->dev, &desc, &res);
+	if (!ret && res.result[2] > SZ_1G) {
+		ret = -E2BIG;
+		goto free_output_rt;
+	}
+
 	*output_rt_size = res.result[2];
-	if (!ret)
-		memcpy(*output_rt, output_rt_buf, *output_rt_size);
-
 	if (ret && res.result[1] == RSCTABLE_BUFFER_NOT_SUFFICIENT)
-		ret = -EAGAIN;
+		ret = -EOVERFLOW;
 
-	qcom_tzmem_free(output_rt_buf);
+free_output_rt:
+	if (ret)
+		qcom_tzmem_free(output_rt_tzm);
 
-free_input_rt_buf:
-	qcom_tzmem_free(input_rt_buf);
-
-disable_scm_bw:
-	qcom_scm_bw_disable();
-
-disable_clk:
-	qcom_scm_clk_disable();
-
-	return ret ? : res.result[0];
+	return ret ? ERR_PTR(ret) : output_rt_tzm;
 }
 
 /**
@@ -877,7 +840,7 @@ disable_clk:
  * If the remote processor firmware binary does contain static resources, they
  * should be passed in input_rt. These will be forwarded to TrustZone for
  * authentication. TrustZone will then append the dynamic resources and return
- * the complete resource table in output_rt.
+ * the complete resource table in output_rt_tzm.
  *
  * If the remote processor firmware binary does not include a resource table,
  * the caller of this function should set input_rt as NULL and input_rt_size
@@ -890,37 +853,87 @@ disable_clk:
  * @pas_id:	    peripheral authentication service id
  * @input_rt:       resource table buffer which is present in firmware binary
  * @input_rt_size:  size of the resource table present in firmware binary
- * @output_rt:	    buffer to which the both static and dynamic resources will
- *		    be returned.
  * @output_rt_size: TrustZone expects caller should pass worst case size for
- *		    the output_rt.
+ *		    the output_rt_tzm.
  *
- * Return: 0 on success and nonzero on failure.
- *
- * Upon successful return, output_rt will have the resource table and output_rt_size
- * will have actual resource table size,
+ * Return:
+ *  On success, returns a pointer to the allocated buffer containing the final
+ *  resource table and output_rt_size will have actual resource table size from
+ *  TrustZone. The caller is responsible for freeing the buffer. On failure,
+ *  returns ERR_PTR(-errno).
  */
-int qcom_scm_pas_get_rsc_table(struct qcom_scm_pas_context *ctx, void *input_rt,
-			       size_t input_rt_size, void **output_rt,
-			       size_t *output_rt_size)
+struct resource_table *qcom_scm_pas_get_rsc_table(struct qcom_scm_pas_context *ctx,
+						  void *input_rt,
+						  size_t input_rt_size,
+						  size_t *output_rt_size)
 {
-	unsigned int retry_num = 5;
+	struct resource_table empty_rsc = {};
+	size_t size = SZ_16K;
+	void *output_rt_tzm;
+	void *input_rt_tzm;
+	void *tbl_ptr;
 	int ret;
 
-	do {
-		*output_rt = kzalloc(*output_rt_size, GFP_KERNEL);
-		if (!*output_rt)
-			return -ENOMEM;
+	ret = qcom_scm_clk_enable();
+	if (ret)
+		return ERR_PTR(ret);
 
-		ret = __qcom_scm_pas_get_rsc_table(ctx->pas_id, input_rt,
-						   input_rt_size, output_rt,
-						   output_rt_size);
-		if (ret)
-			kfree(*output_rt);
+	ret = qcom_scm_bw_enable();
+	if (ret)
+		goto disable_clk;
 
-	} while (ret == -EAGAIN && --retry_num);
+	/*
+	 * TrustZone can not accept buffer as NULL value as argument hence,
+	 * we need to pass a input buffer indicating that subsystem firmware
+	 * does not have resource table by filling resource table structure.
+	 */
+	if (!input_rt) {
+		input_rt = &empty_rsc;
+		input_rt_size = sizeof(empty_rsc);
+	}
 
-	return ret;
+	input_rt_tzm = qcom_tzmem_alloc(__scm->mempool, input_rt_size, GFP_KERNEL);
+	if (!input_rt_tzm) {
+		ret = -ENOMEM;
+		goto disable_scm_bw;
+	}
+
+	memcpy(input_rt_tzm, input_rt, input_rt_size);
+
+	output_rt_tzm = __qcom_scm_pas_get_rsc_table(ctx->pas_id, input_rt_tzm,
+						     input_rt_size, &size);
+	if (PTR_ERR(output_rt_tzm) == -EOVERFLOW)
+		/* Try again with the size requested by the TZ */
+		output_rt_tzm = __qcom_scm_pas_get_rsc_table(ctx->pas_id,
+							     input_rt_tzm,
+							     input_rt_size,
+							     &size);
+	if (IS_ERR(output_rt_tzm)) {
+		ret = PTR_ERR(output_rt_tzm);
+		goto free_input_rt;
+	}
+
+	tbl_ptr = kzalloc(size, GFP_KERNEL);
+	if (!tbl_ptr) {
+		qcom_tzmem_free(output_rt_tzm);
+		ret = -ENOMEM;
+		goto free_input_rt;
+	}
+
+	memcpy(tbl_ptr, output_rt_tzm, size);
+	*output_rt_size = size;
+	qcom_tzmem_free(output_rt_tzm);
+
+free_input_rt:
+	qcom_tzmem_free(input_rt_tzm);
+
+disable_scm_bw:
+	qcom_scm_bw_disable();
+
+disable_clk:
+	qcom_scm_clk_disable();
+
+	return ret ? ERR_PTR(ret) : tbl_ptr;
 }
 EXPORT_SYMBOL_GPL(qcom_scm_pas_get_rsc_table);
 
@@ -985,22 +998,21 @@ int qcom_scm_pas_prepare_and_auth_reset(struct qcom_scm_pas_context *ctx)
 	u64 handle;
 	int ret;
 
-	if (!ctx->has_iommu)
-		return qcom_scm_pas_auth_and_reset(ctx->pas_id);
-
 	/*
 	 * When Linux running @ EL1, Gunyah hypervisor running @ EL2 traps the
 	 * auth_and_reset call and create an shmbridge on the remote subsystem
 	 * memory region and then invokes a call to TrustZone to authenticate.
+	 */
+	if (!ctx->use_tzmem)
+		return qcom_scm_pas_auth_and_reset(ctx->pas_id);
+
+	/*
 	 * When Linux runs @ EL2 Linux must create the shmbridge itself and then
 	 * subsequently call TrustZone for authenticate and reset.
 	 */
 	ret = qcom_tzmem_shm_bridge_create(ctx->mem_phys, ctx->mem_size, &handle);
-	if (ret) {
-		dev_err(__scm->dev, "Failed to create shmbridge for PAS ID (%u): %d\n",
-			ctx->pas_id, ret);
+	if (ret)
 		return ret;
-	}
 
 	ret = qcom_scm_pas_auth_and_reset(ctx->pas_id);
 	qcom_tzmem_shm_bridge_delete(handle);

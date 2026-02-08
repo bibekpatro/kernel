@@ -227,17 +227,6 @@ void *qcom_mdt_read_metadata(const struct firmware *fw, size_t *data_len,
 }
 EXPORT_SYMBOL_GPL(qcom_mdt_read_metadata);
 
-/**
- * qcom_mdt_pas_init() - initialize PAS region for firmware loading
- * @dev:	device handle to associate resources with
- * @fw:		firmware object for the mdt file
- * @fw_name:	name of the firmware, for construction of segment file names
- * @pas_id:	PAS identifier
- * @mem_phys:	physical address of allocated memory region
- * @ctx:	PAS context, ctx->metadata to be released by caller
- *
- * Returns 0 on success, negative errno otherwise.
- */
 static int __qcom_mdt_pas_init(struct device *dev, const struct firmware *fw,
 			       const char *fw_name, int pas_id, phys_addr_t mem_phys,
 			       struct qcom_scm_pas_context *ctx)
