@@ -72,7 +72,7 @@ static int iris_load_fw_to_memory(struct iris_core *core, const char *fw_name)
 		goto err_release_fw;
 	}
 
-	ret = qcom_mdt_pas_load(ctx, firmware, fw_name, mem_virt, NULL);
+	ret = qcom_mdt_pas_load(ctx, firmware, fw_name, NULL);
 	qcom_scm_pas_metadata_release(ctx);
 	if (ret)
 		goto err_mem_unmap;
