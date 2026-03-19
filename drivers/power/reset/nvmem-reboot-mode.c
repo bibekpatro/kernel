@@ -10,6 +10,7 @@
 #include <linux/nvmem-consumer.h>
 #include <linux/platform_device.h>
 #include <linux/reboot-mode.h>
+#include <linux/slab.h>
 
 struct nvmem_reboot_mode {
 	struct reboot_mode_driver reboot;
@@ -20,16 +21,23 @@ static int nvmem_reboot_mode_write(struct reboot_mode_driver *reboot, u64 magic)
 {
 	struct nvmem_reboot_mode *nvmem_rbm;
 	u32 magic_32;
+	size_t buf_len;
+	void *buf;
 	int ret;
 
-	if (magic > U32_MAX)
+	nvmem_rbm = container_of(reboot, struct nvmem_reboot_mode, reboot);
+
+	buf = nvmem_cell_read(nvmem_rbm->cell, &buf_len);
+	if (IS_ERR(buf))
+		return PTR_ERR(buf);
+	kfree(buf);
+
+	if (buf_len > sizeof(magic))
 		return -EINVAL;
 
 	magic_32 = magic;
 
-	nvmem_rbm = container_of(reboot, struct nvmem_reboot_mode, reboot);
-
-	ret = nvmem_cell_write(nvmem_rbm->cell, &magic_32, sizeof(magic_32));
+	ret = nvmem_cell_write(nvmem_rbm->cell, &magic_32, buf_len);
 	if (ret < 0)
 		dev_err(reboot->dev, "update reboot mode bits failed\n");
 

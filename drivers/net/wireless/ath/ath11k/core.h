@@ -1328,6 +1328,9 @@ static inline void ath11k_core_create_firmware_path(struct ath11k_base *ab,
 {
 	const char *fw_name = ath11k_core_get_usecase_firmware(ab);
 
+	if (!fw_name)
+		fw_name = ath11k_core_get_usecase_firmware(ab);
+
 	if (fw_name && strncmp(filename, "board", 5))
 		snprintf(buf, buf_len, "%s/%s/%s/%s", ATH11K_FW_DIR,
 			 ab->hw_params.fw.dir, fw_name, filename);

@@ -993,6 +993,34 @@ static const struct dmi_system_id ath11k_pm_quirk_table[] = {
 			DMI_MATCH(DMI_PRODUCT_NAME, "21F9"),
 		},
 	},
+	{
+		.driver_data = (void *)ATH11K_PM_WOW,
+		.matches = { /* Z13 G1 */
+			DMI_MATCH(DMI_BOARD_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "21D2"),
+		},
+	},
+	{
+		.driver_data = (void *)ATH11K_PM_WOW,
+		.matches = { /* Z13 G1 */
+			DMI_MATCH(DMI_BOARD_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "21D3"),
+		},
+	},
+	{
+		.driver_data = (void *)ATH11K_PM_WOW,
+		.matches = { /* Z16 G1 */
+			DMI_MATCH(DMI_BOARD_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "21D4"),
+		},
+	},
+	{
+		.driver_data = (void *)ATH11K_PM_WOW,
+		.matches = { /* Z16 G1 */
+			DMI_MATCH(DMI_BOARD_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_PRODUCT_NAME, "21D5"),
+		},
+	},
 	{}
 };
 
@@ -1009,23 +1037,14 @@ static const struct __ath11k_core_usecase_firmware_table {
 
 const char *ath11k_core_get_usecase_firmware(struct ath11k_base *ab)
 {
-	struct device_node *root __free(device_node) = of_find_node_by_path("/");
 	const struct __ath11k_core_usecase_firmware_table *entry = NULL;
-	int i, count = of_property_count_strings(root, "compatible");
-	const char *compatible = NULL;
 
-	for (i = 0; i < count; i++) {
-		if (of_property_read_string_index(root, "compatible", i,
-						  &compatible) < 0)
-			continue;
-
-		entry = ath11k_core_usecase_firmware_table;
-		while (entry->compatible) {
-			if (ab->hw_rev == entry->hw_rev &&
-			    !strcmp(entry->compatible, compatible))
-				return entry->firmware_name;
-			entry++;
-		}
+	entry = ath11k_core_usecase_firmware_table;
+	while (entry->compatible) {
+		if (ab->hw_rev == entry->hw_rev &&
+		    of_machine_is_compatible(entry->compatible))
+			return entry->firmware_name;
+		entry++;
 	}
 
 	return NULL;
