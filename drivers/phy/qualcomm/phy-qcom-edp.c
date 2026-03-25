@@ -1096,7 +1096,7 @@ static int qcom_edp_phy_probe(struct platform_device *pdev)
 
 	edp->num_clks = devm_clk_bulk_get_all(dev, &edp->clks);
 	if (edp->num_clks < 0)
-		return dev_err_probe(dev, edp->num_clks, "failed to parse clocks\n");
+		return dev_err_probe(dev, edp->num_clks, "failed to get clocks\n");
 
 	edp->supplies[0].supply = "vdda-phy";
 	edp->supplies[1].supply = "vdda-pll";
