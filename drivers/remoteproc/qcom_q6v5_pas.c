@@ -2099,8 +2099,8 @@ static const struct qcom_pas_data nord_adsp_resource = {
 	.pas_id = 1,
 	.dtb_pas_id = 36,
 	.minidump_id = 5,
-	.auto_boot = true,
-	.early_boot = true,
+	.auto_boot = false,
+	.early_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"mx",
@@ -2120,8 +2120,8 @@ static const struct qcom_pas_data nord_adsp1_resource = {
 	.pas_id = 53,
 	.dtb_pas_id = 55,
 	.minidump_id = 21,
-	.auto_boot = true,
-	.early_boot = true,
+	.auto_boot = false,
+	.early_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"mx",
@@ -2141,8 +2141,8 @@ static const struct qcom_pas_data nord_adsp2_resource = {
 	.pas_id = 54,
 	.dtb_pas_id = 56,
 	.minidump_id = 22,
-	.auto_boot = true,
-	.early_boot = true,
+	.auto_boot = false,
+	.early_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"mx",
@@ -2162,7 +2162,7 @@ static const struct qcom_pas_data nord_cdsp0_resource = {
 	.pas_id = 18,
 	.dtb_pas_id = 37,
 	.minidump_id = 7,
-	.auto_boot = true,
+	.auto_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"nmxc",
@@ -2183,7 +2183,7 @@ static const struct qcom_pas_data nord_cdsp1_resource = {
 	.pas_id = 30,
 	.dtb_pas_id = 59,
 	.minidump_id = 20,
-	.auto_boot = true,
+	.auto_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"nmxc",
@@ -2204,7 +2204,7 @@ static const struct qcom_pas_data nord_cdsp2_resource = {
 	.pas_id = 57,
 	.dtb_pas_id = 60,
 	.minidump_id = 29,
-	.auto_boot = true,
+	.auto_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"nmxc",
@@ -2225,7 +2225,7 @@ static const struct qcom_pas_data nord_cdsp3_resource = {
 	.pas_id = 58,
 	.dtb_pas_id = 61,
 	.minidump_id = 30,
-	.auto_boot = true,
+	.auto_boot = false,
 	.proxy_pd_names = (char*[]){
 		"cx",
 		"nmxc",
