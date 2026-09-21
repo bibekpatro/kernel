@@ -769,39 +769,63 @@ static int qcom_pas_start(struct rproc *rproc)
 			return ret;
 	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=q6v5_prepare\n", __func__, rproc->name);
 	ret = qcom_q6v5_prepare(&pas->q6v5);
-	if (ret)
+	if (ret) {
+		pr_err("PAS_DBG: %s: rproc=%s q6v5_prepare failed ret=%d\n", __func__, rproc->name, ret);
 		return ret;
+	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=pds_enable count=%d\n", __func__, rproc->name, pas->proxy_pd_count);
 	ret = qcom_pas_pds_enable(pas, pas->proxy_pds, pas->proxy_pd_count);
-	if (ret < 0)
+	if (ret < 0) {
+		pr_err("PAS_DBG: %s: rproc=%s pds_enable failed ret=%d\n", __func__, rproc->name, ret);
 		goto disable_irqs;
+	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=xo_clk_enable\n", __func__, rproc->name);
 	ret = clk_prepare_enable(pas->xo);
-	if (ret)
+	if (ret) {
+		pr_err("PAS_DBG: %s: rproc=%s xo_clk failed ret=%d\n", __func__, rproc->name, ret);
 		goto disable_proxy_pds;
+	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=aggre2_clk_enable\n", __func__, rproc->name);
 	ret = clk_prepare_enable(pas->aggre2_clk);
-	if (ret)
+	if (ret) {
+		pr_err("PAS_DBG: %s: rproc=%s aggre2_clk failed ret=%d\n", __func__, rproc->name, ret);
 		goto disable_xo_clk;
+	}
 
 	if (pas->cx_supply) {
+		pr_err("PAS_DBG: %s: rproc=%s step=cx_supply_enable\n", __func__, rproc->name);
 		ret = regulator_enable(pas->cx_supply);
-		if (ret)
+		if (ret) {
+			pr_err("PAS_DBG: %s: rproc=%s cx_supply failed ret=%d\n", __func__, rproc->name, ret);
 			goto disable_aggre2_clk;
+		}
 	}
 
 	if (pas->px_supply) {
+		pr_err("PAS_DBG: %s: rproc=%s step=px_supply_enable\n", __func__, rproc->name);
 		ret = regulator_enable(pas->px_supply);
-		if (ret)
+		if (ret) {
+			pr_err("PAS_DBG: %s: rproc=%s px_supply failed ret=%d\n", __func__, rproc->name, ret);
 			goto disable_cx_supply;
+		}
 	}
 
 	if (pas->dtb_pas_id) {
+		pr_err("PAS_DBG: %s: rproc=%s step=dtb_map_carveout phys=%pa size=%zu\n",
+		       __func__, rproc->name, &pas->dtb_mem_phys, pas->dtb_mem_size);
 		ret = qcom_pas_map_carveout(rproc, pas->dtb_mem_phys, pas->dtb_mem_size);
-		if (ret)
+		if (ret) {
+			pr_err("PAS_DBG: %s: rproc=%s dtb_map_carveout failed ret=%d\n", __func__, rproc->name, ret);
 			goto disable_px_supply;
+		}
 
+		pr_err("PAS_DBG: %s: rproc=%s step=dtb_auth_and_reset pas_id=%d\n",
+		       __func__, rproc->name, pas->dtb_pas_id);
 		ret = qcom_pas_prepare_and_auth_reset(pas->dtb_pas_ctx);
 		if (ret) {
 			dev_err(pas->dev,
@@ -810,17 +834,27 @@ static int qcom_pas_start(struct rproc *rproc)
 		}
 	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=mdt_pas_load fw=%s mem_phys=%pa size=%zu\n",
+	       __func__, rproc->name, rproc->firmware, &pas->mem_phys, pas->mem_size);
 	ret = qcom_mdt_pas_load(pas->pas_ctx, pas->firmware, rproc->firmware,
 				&pas->mem_reloc);
-	if (ret)
+	if (ret) {
+		pr_err("PAS_DBG: %s: rproc=%s mdt_pas_load failed ret=%d\n", __func__, rproc->name, ret);
 		goto release_pas_metadata;
+	}
 
 	qcom_pil_info_store(pas->info_name, pas->mem_phys, pas->mem_size);
 
+	pr_err("PAS_DBG: %s: rproc=%s step=map_carveout phys=%pa size=%zu\n",
+	       __func__, rproc->name, &pas->mem_phys, pas->mem_size);
 	ret = qcom_pas_map_carveout(rproc, pas->mem_phys, pas->mem_size);
-	if (ret)
+	if (ret) {
+		pr_err("PAS_DBG: %s: rproc=%s map_carveout failed ret=%d\n", __func__, rproc->name, ret);
 		goto release_pas_metadata;
+	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=auth_and_reset pas_id=%d mem_phys=%pa\n",
+	       __func__, rproc->name, pas->pas_id, &pas->mem_phys);
 	ret = qcom_pas_prepare_and_auth_reset(pas->pas_ctx);
 	if (ret) {
 		dev_err(pas->dev,
@@ -828,6 +862,7 @@ static int qcom_pas_start(struct rproc *rproc)
 		goto unmap_carveout;
 	}
 
+	pr_err("PAS_DBG: %s: rproc=%s step=wait_for_start timeout=5000ms\n", __func__, rproc->name);
 	ret = qcom_q6v5_wait_for_start(&pas->q6v5, msecs_to_jiffies(5000));
 	if (ret == -ETIMEDOUT) {
 		dev_err(pas->dev, "start timed out\n");
@@ -2095,9 +2130,9 @@ static const struct qcom_pas_data milos_cdsp_resource = {
 static const struct qcom_pas_data nord_adsp_resource = {
 	.crash_reason_smem = 423,
 	.firmware_name = "adsp.mdt",
-	.dtb_firmware_name = "adsp_dtb.mbn",
+	//.dtb_firmware_name = "adsp_dtb.mbn",
 	.pas_id = 1,
-	.dtb_pas_id = 36,
+	//.dtb_pas_id = 36,
 	.minidump_id = 5,
 	.auto_boot = false,
 	.early_boot = false,

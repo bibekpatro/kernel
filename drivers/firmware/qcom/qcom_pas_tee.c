@@ -171,6 +171,12 @@ static int qcom_pas_tee_init_image(struct device *dev, u32 pas_id,
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS init image failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
+		dev_err(dev, "PAS_DBG: TEE error 0x%x: %s\n", inv_arg.ret,
+			inv_arg.ret == 0xffff000a ? "TEE_ERROR_NOT_SUPPORTED (PAS ID not in OP-TEE TA)" :
+			inv_arg.ret == 0xffff0001 ? "TEE_ERROR_ACCESS_DENIED" :
+			inv_arg.ret == 0xffff0006 ? "TEE_ERROR_BAD_PARAMETERS" :
+			inv_arg.ret == 0xffff3024 ? "TEE_ERROR_SECURITY (hash mismatch)" :
+			"unknown");
 		tee_shm_free(mdata_shm);
 		return ret ?: -EINVAL;
 	}
@@ -330,6 +336,12 @@ static int __qcom_pas_tee_auth_and_reset(struct device *dev, u32 pas_id,
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS auth reset failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
+		dev_err(dev, "PAS_DBG: TEE error 0x%x: %s\n", inv_arg.ret,
+			inv_arg.ret == 0xffff000a ? "TEE_ERROR_NOT_SUPPORTED" :
+			inv_arg.ret == 0xffff0001 ? "TEE_ERROR_ACCESS_DENIED" :
+			inv_arg.ret == 0xffff0006 ? "TEE_ERROR_BAD_PARAMETERS" :
+			inv_arg.ret == 0xffff3024 ? "TEE_ERROR_SECURITY (hash mismatch)" :
+			"unknown");
 		return ret ?: -EINVAL;
 	}
 
