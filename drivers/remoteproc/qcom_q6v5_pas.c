@@ -862,8 +862,8 @@ static int qcom_pas_start(struct rproc *rproc)
 		goto unmap_carveout;
 	}
 
-	pr_err("PAS_DBG: %s: rproc=%s step=wait_for_start timeout=5000ms\n", __func__, rproc->name);
-	ret = qcom_q6v5_wait_for_start(&pas->q6v5, msecs_to_jiffies(5000));
+	pr_err("PAS_DBG: %s: rproc=%s step=wait_for_start timeout=86400000ms\n", __func__, rproc->name);
+	ret = qcom_q6v5_wait_for_start(&pas->q6v5, msecs_to_jiffies(86400000));
 	if (ret == -ETIMEDOUT) {
 		dev_err(pas->dev, "start timed out\n");
 		qcom_pas_shutdown(pas->pas_id);
