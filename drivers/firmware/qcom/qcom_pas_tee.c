@@ -281,7 +281,11 @@ static void *qcom_pas_tee_get_rsc_table(struct device *dev,
 			dev_err(dev, "rt_shm get VA failed\n");
 			return ERR_CAST(rt_shm_va);
 		}
-		memcpy(rt_shm_va, input_rt, input_rt_size);
+		if(input_rt){
+			memcpy(rt_shm_va, input_rt, input_rt_size);
+		} else{
+			dev_err(dev, "PAS: input_rt is NULL\n");
+		}
 
 		param[1].u.memref.shm = rt_shm;
 		ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
@@ -431,7 +435,7 @@ static void qcom_pas_tee_metadata_release(struct device *dev,
 
 	pr_err("PAS_DBG: %s: pas_id=%u\n", __func__, ctx->pas_id);
 
-	tee_shm_free(mdata_shm);
+	//tee_shm_free(mdata_shm);
 }
 
 static struct qcom_pas_ops qcom_pas_ops_tee = {
