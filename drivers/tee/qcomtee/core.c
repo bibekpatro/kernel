@@ -690,19 +690,28 @@ qcomtee_object_invoke_ctx_invoke(struct qcomtee_object_invoke_ctx *oic,
 
 	tee_shm_get_pa(oic->out_shm, 0, &out_msg_paddr);
 	tee_shm_get_pa(oic->in_shm, 0, &in_msg_paddr);
-	if (!(oic->flags & QCOMTEE_OIC_FLAG_BUSY))
+	if (!(oic->flags & QCOMTEE_OIC_FLAG_BUSY)) {
+		pr_err("pil_dbg: %s: invoke_smc in=%pa/%zu out=%pa/%zu\n",
+		       __func__, &in_msg_paddr, oic->in_msg.size,
+		       &out_msg_paddr, oic->out_msg.size);
 		ret = qcom_scm_qtee_invoke_smc(in_msg_paddr, oic->in_msg.size,
 					       out_msg_paddr, oic->out_msg.size,
 					       &res, res_type);
-	else
+	} else {
+		pr_err("pil_dbg: %s: callback_response out=%pa/%zu\n",
+		       __func__, &out_msg_paddr, oic->out_msg.size);
 		ret = qcom_scm_qtee_callback_response(out_msg_paddr,
 						      oic->out_msg.size,
 						      &res, res_type);
+	}
 
 	if (ret)
 		pr_err("QTEE returned with %d.\n", ret);
 	else
 		*result = (int)res;
+
+	pr_err("pil_dbg: %s: ret=%d result=%d res_type=%llu\n", __func__,
+	       ret, ret ? -1 : (int)res, res_type ? *res_type : 0);
 
 	return ret;
 }
@@ -890,6 +899,8 @@ qcomtee_object_get_client_env(struct qcomtee_object_invoke_ctx *oic)
 	ret = qcomtee_object_do_invoke(oic, ROOT_QCOMTEE_OBJECT,
 				       QCOMTEE_ROOT_OP_REG_WITH_CREDENTIALS, u,
 				       &result);
+	pr_err("pil_dbg: %s: REG_WITH_CREDENTIALS ret=%d result=%d\n",
+	       __func__, ret, result);
 	if (ret || result)
 		return NULL_QCOMTEE_OBJECT;
 
@@ -909,6 +920,8 @@ qcomtee_object_get_service(struct qcomtee_object_invoke_ctx *oic,
 	u[1].type = QCOMTEE_ARG_TYPE_OO;
 	ret = qcomtee_object_do_invoke(oic, client_env, QCOMTEE_CLIENT_ENV_OPEN,
 				       u, &result);
+	pr_err("pil_dbg: %s: CLIENT_ENV_OPEN uid=0x%x ret=%d result=%d\n",
+	       __func__, uid, ret, result);
 
 	if (ret || result)
 		return NULL_QCOMTEE_OBJECT;

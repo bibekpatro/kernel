@@ -81,6 +81,7 @@ static int optee_register_device(const uuid_t *device_uuid, u32 func)
 	struct tee_client_device *optee_device = NULL;
 	int rc;
 
+	pr_err("%s %d pil_dbg: device_uuid:%pUb", __func__, __LINE__, device_uuid);
 	optee_device = kzalloc(sizeof(*optee_device), GFP_KERNEL);
 	if (!optee_device)
 		return -ENOMEM;
@@ -109,6 +110,7 @@ static int optee_register_device(const uuid_t *device_uuid, u32 func)
 
 static int __optee_enumerate_devices(u32 func)
 {
+	pr_err("pil_dbg: %s: entry func=%u\n", __func__, func);
 	const uuid_t pta_uuid =
 		UUID_INIT(0x7011a688, 0xddde, 0x4053,
 			  0xa5, 0xa9, 0x7b, 0x3c, 0x4d, 0xdf, 0x13, 0xb8);
@@ -119,6 +121,7 @@ static int __optee_enumerate_devices(u32 func)
 	u32 shm_size = 0, idx, num_devices = 0;
 	int rc;
 
+	pr_err("%s %d pil_dbg: enumerate device ", __func__, __LINE__);
 	memset(&sess_arg, 0, sizeof(sess_arg));
 
 	/* Open context with OP-TEE driver */
@@ -134,9 +137,12 @@ static int __optee_enumerate_devices(u32 func)
 	rc = tee_client_open_session(ctx, &sess_arg, NULL);
 	if ((rc < 0) || (sess_arg.ret != TEEC_SUCCESS)) {
 		/* Device enumeration pseudo TA not found */
+		pr_err("pil_dbg: %s: open_session failed rc=%d sess_ret=0x%x (pseudo TA not found)\n",
+		       __func__, rc, sess_arg.ret);
 		rc = 0;
 		goto out_ctx;
 	}
+	pr_err("pil_dbg: %s: open_session ok session=%u\n", __func__, sess_arg.session);
 
 	rc = get_devices(ctx, sess_arg.session, NULL, &shm_size, func);
 	if (rc < 0 || !shm_size)

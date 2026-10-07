@@ -111,7 +111,11 @@ static bool qcom_pas_tee_supported(struct device *dev, u32 pas_id)
 	};
 	int ret;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_IS_SUPPORTED pas_id=%u\n",
+	       __func__, pas_id);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_IS_SUPPORTED pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+	       __func__, pas_id, ret, inv_arg.ret);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS not supported, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
@@ -161,7 +165,11 @@ static int qcom_pas_tee_init_image(struct device *dev, u32 pas_id,
 	param[1].u.memref.shm = mdata_shm;
 	param[1].u.memref.size = size;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_INIT_IMAGE pas_id=%u size=%zu\n",
+	       __func__, pas_id, size);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_INIT_IMAGE pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+	       __func__, pas_id, ret, inv_arg.ret);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS init image failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
@@ -200,7 +208,11 @@ static int qcom_pas_tee_mem_setup(struct device *dev, u32 pas_id,
 	};
 	int ret;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_MEM_SETUP pas_id=%u addr=%pa size=%pa\n",
+	       __func__, pas_id, &addr, &size);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_MEM_SETUP pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+	       __func__, pas_id, ret, inv_arg.ret);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS mem setup failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
@@ -236,7 +248,11 @@ static void *qcom_pas_tee_get_rsc_table(struct device *dev,
 	void *rt_buf = NULL;
 	int ret;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_GET_RESOURCE_TABLE (probe) pas_id=%u\n",
+	       __func__, ctx->pas_id);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_GET_RESOURCE_TABLE (probe) pas_id=%u ret=%d inv_arg.ret=0x%x rt_size=%zu\n",
+	       __func__, ctx->pas_id, ret, inv_arg.ret, param[1].u.memref.size);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS get RT failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			ctx->pas_id, ret, inv_arg.ret);
@@ -263,7 +279,11 @@ static void *qcom_pas_tee_get_rsc_table(struct device *dev,
 		memcpy(rt_shm_va, input_rt, input_rt_size);
 
 		param[1].u.memref.shm = rt_shm;
+		pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_GET_RESOURCE_TABLE (fetch) pas_id=%u\n",
+		       __func__, ctx->pas_id);
 		ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+		pr_err("pil_dbg: %s: TA_QCOM_PAS_GET_RESOURCE_TABLE (fetch) pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+		       __func__, ctx->pas_id, ret, inv_arg.ret);
 		if (ret < 0 || inv_arg.ret != 0) {
 			dev_err(dev, "PAS get RT failed, pas_id: %d, ret: %d, err: 0x%x\n",
 				ctx->pas_id, ret, inv_arg.ret);
@@ -310,7 +330,11 @@ static int __qcom_pas_tee_auth_and_reset(struct device *dev, u32 pas_id,
 	};
 	int ret;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_AUTH_AND_RESET pas_id=%u mem_phys=%pa mem_size=%zu\n",
+	       __func__, pas_id, &mem_phys, mem_size);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_AUTH_AND_RESET pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+	       __func__, pas_id, ret, inv_arg.ret);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS auth reset failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
@@ -350,7 +374,11 @@ static int qcom_pas_tee_set_remote_state(struct device *dev, u32 state,
 	};
 	int ret;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_SET_REMOTE_STATE pas_id=%u state=%u\n",
+	       __func__, pas_id, state);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_SET_REMOTE_STATE pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+	       __func__, pas_id, ret, inv_arg.ret);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS set remote state failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
@@ -376,7 +404,11 @@ static int qcom_pas_tee_shutdown(struct device *dev, u32 pas_id)
 	};
 	int ret;
 
+	pr_err("pil_dbg: %s: invoking TA_QCOM_PAS_SHUTDOWN pas_id=%u\n",
+	       __func__, pas_id);
 	ret = tee_client_invoke_func(data->ctx, &inv_arg, param);
+	pr_err("pil_dbg: %s: TA_QCOM_PAS_SHUTDOWN pas_id=%u ret=%d inv_arg.ret=0x%x\n",
+	       __func__, pas_id, ret, inv_arg.ret);
 	if (ret < 0 || inv_arg.ret != 0) {
 		dev_err(dev, "PAS shutdown failed, pas_id: %d, ret: %d, err: 0x%x\n",
 			pas_id, ret, inv_arg.ret);
@@ -422,19 +454,28 @@ static int qcom_pas_tee_probe(struct device *dev)
 	};
 	int ret;
 
+	pr_err("pil_dbg: %s: probing qcom-pas-tee\n", __func__);
+
 	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
 	data->ctx = tee_client_open_context(NULL, optee_ctx_match, NULL, NULL);
-	if (IS_ERR(data->ctx))
+	if (IS_ERR(data->ctx)) {
+		pr_err("pil_dbg: %s: tee_client_open_context failed: %ld\n",
+		       __func__, PTR_ERR(data->ctx));
 		return -ENODEV;
+	}
 
 	export_uuid(sess_arg.uuid, &pas_dev->id.uuid);
+	pr_err("pil_dbg: %s: opening session with PAS TA uuid=%pUb\n",
+	       __func__, &pas_dev->id.uuid);
 	ret = tee_client_open_session(data->ctx, &sess_arg, NULL);
 	if (ret < 0 || sess_arg.ret != 0) {
 		dev_err(dev, "tee_client_open_session failed, ret: %d, err: 0x%x\n",
 			ret, sess_arg.ret);
+		pr_err("pil_dbg: %s: tee_client_open_session failed, ret=%d err=0x%x\n",
+		       __func__, ret, sess_arg.ret);
 		tee_client_close_context(data->ctx);
 		return ret ?: -EINVAL;
 	}
@@ -442,6 +483,8 @@ static int qcom_pas_tee_probe(struct device *dev)
 	data->session_id = sess_arg.session;
 	dev_set_drvdata(dev, data);
 	qcom_pas_ops_tee.dev = dev;
+	pr_err("pil_dbg: %s: session opened, session_id=%u, registering ops\n",
+	       __func__, data->session_id);
 	qcom_pas_ops_register(&qcom_pas_ops_tee);
 
 	return ret;

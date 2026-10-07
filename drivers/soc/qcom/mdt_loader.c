@@ -498,6 +498,8 @@ int qcom_mdt_pas_load(struct qcom_pas_context *ctx, const struct firmware *fw,
 	int ret;
 
 	ret = __qcom_mdt_pas_init(ctx->dev, fw, firmware, ctx->pas_id, ctx->mem_phys, ctx);
+	pr_err("pil_dbg: %s: pas_id=%u __qcom_mdt_pas_init ret=%d\n", __func__,
+	       ctx->pas_id, ret);
 	if (ret)
 		return ret;
 
@@ -510,6 +512,8 @@ int qcom_mdt_pas_load(struct qcom_pas_context *ctx, const struct firmware *fw,
 
 	ret = qcom_mdt_load_no_init(ctx->dev, fw, firmware, mem_region, ctx->mem_phys,
 				    ctx->mem_size, reloc_base);
+	pr_err("pil_dbg: %s: pas_id=%u qcom_mdt_load_no_init ret=%d\n", __func__,
+	       ctx->pas_id, ret);
 	iounmap(mem_region);
 	return ret;
 }

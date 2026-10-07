@@ -1479,6 +1479,7 @@ static optee_invoke_fn *get_invoke_func(struct device *dev)
 	const char *method;
 
 	pr_info("probing for conduit method.\n");
+	pr_err("pil_dbg: %s: entry\n", __func__);
 
 	if (device_property_read_string(dev, "method", &method)) {
 		pr_warn("missing \"method\" property\n");
@@ -1732,33 +1733,48 @@ static int optee_probe(struct platform_device *pdev)
 	u32 sec_caps;
 	int rc;
 
+	pr_err("pil_dbg: %s: entry\n", __func__);
+
 	invoke_fn = get_invoke_func(&pdev->dev);
-	if (IS_ERR(invoke_fn))
+	if (IS_ERR(invoke_fn)) {
+		pr_err("pil_dbg: %s: get_invoke_func failed: %ld\n", __func__, PTR_ERR(invoke_fn));
 		return PTR_ERR(invoke_fn);
+	}
+	pr_err("pil_dbg: %s: got invoke_fn\n", __func__);
 
 	rc = optee_load_fw(pdev, invoke_fn);
-	if (rc)
+	if (rc) {
+		pr_err("pil_dbg: %s: optee_load_fw failed: %d\n", __func__, rc);
 		return rc;
+	}
+	pr_err("pil_dbg: %s: optee_load_fw ok\n", __func__);
 
 	if (!optee_msg_api_uid_is_optee_api(invoke_fn)) {
+		pr_err("pil_dbg: %s: api uid mismatch\n", __func__);
 		pr_warn("api uid mismatch\n");
 		return -EINVAL;
 	}
+	pr_err("pil_dbg: %s: api uid ok\n", __func__);
 
 	optee_msg_get_os_revision(invoke_fn);
 
 	if (!optee_msg_api_revision_is_compatible(invoke_fn)) {
+		pr_err("pil_dbg: %s: api revision mismatch\n", __func__);
 		pr_warn("api revision mismatch\n");
 		return -EINVAL;
 	}
+	pr_err("pil_dbg: %s: api revision ok\n", __func__);
 
 	thread_count = optee_msg_get_thread_count(invoke_fn);
 	if (!optee_msg_exchange_capabilities(invoke_fn, &sec_caps,
 					     &max_notif_value,
 					     &rpc_param_count)) {
+		pr_err("pil_dbg: %s: capabilities mismatch\n", __func__);
 		pr_warn("capabilities mismatch\n");
 		return -EINVAL;
 	}
+	pr_err("pil_dbg: %s: capabilities ok sec_caps=0x%x thread_count=%u\n",
+	       __func__, sec_caps, thread_count);
 
 	/*
 	 * Try to use dynamic shared memory if possible
@@ -1806,8 +1822,11 @@ static int optee_probe(struct platform_device *pdev)
 		pool = optee_config_shm_memremap(invoke_fn, &memremaped_shm);
 	}
 
-	if (IS_ERR(pool))
+	if (IS_ERR(pool)) {
+		pr_err("pil_dbg: %s: shm pool alloc failed: %ld\n", __func__, PTR_ERR(pool));
 		return PTR_ERR(pool);
+	}
+	pr_err("pil_dbg: %s: shm pool ok\n", __func__);
 
 	optee = kzalloc(sizeof(*optee), GFP_KERNEL);
 	if (!optee) {
@@ -1843,10 +1862,12 @@ static int optee_probe(struct platform_device *pdev)
 	rc = tee_device_register(optee->teedev);
 	if (rc)
 		goto err_unreg_supp_teedev;
+	pr_err("pil_dbg: %s: teedev registered\n", __func__);
 
 	rc = tee_device_register(optee->supp_teedev);
 	if (rc)
 		goto err_unreg_supp_teedev;
+	pr_err("pil_dbg: %s: supp_teedev registered\n", __func__);
 
 	optee_cq_init(&optee->call_queue, thread_count);
 	optee_supp_init(&optee->supp);
@@ -1907,9 +1928,13 @@ static int optee_probe(struct platform_device *pdev)
 	if (optee->smc.sec_caps & OPTEE_SMC_SEC_CAP_DYNAMIC_SHM)
 		pr_info("dynamic shared memory is enabled\n");
 
+	pr_err("pil_dbg: %s: calling optee_enumerate_devices\n", __func__);
 	rc = optee_enumerate_devices(PTA_CMD_GET_DEVICES);
-	if (rc)
+	if (rc) {
+		pr_err("pil_dbg: %s: optee_enumerate_devices failed: %d\n", __func__, rc);
 		goto err_disable_shm_cache;
+	}
+	pr_err("pil_dbg: %s: optee_enumerate_devices ok\n", __func__);
 
 	INIT_WORK(&optee->rpmb_scan_bus_work, optee_bus_scan_rpmb);
 	optee->rpmb_intf.notifier_call = optee_rpmb_intf_rdev;

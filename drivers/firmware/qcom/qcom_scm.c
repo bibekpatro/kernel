@@ -714,6 +714,8 @@ static int __qcom_scm_pas_mem_setup(struct device *dev, u32 pas_id,
 
 	ret = qcom_scm_call(dev, &desc, &res);
 	qcom_scm_bw_disable();
+	pr_err("pil_dbg: %s: pas_id=%u ret=%d result[0]=%llu\n", __func__,
+	       pas_id, ret, res.result[0]);
 
 disable_clk:
 	qcom_scm_clk_disable();
@@ -764,6 +766,8 @@ static void *__qcom_scm_pas_get_rsc_table(struct device *dev, u32 pas_id,
 	 * be of unresonable size.
 	 */
 	ret = qcom_scm_call(dev, &desc, &res);
+	pr_err("pil_dbg: %s: pas_id=%u ret=%d result[1]=%llu result[2]=%llu\n",
+	       __func__, pas_id, ret, res.result[1], res.result[2]);
 	if (!ret && res.result[2] > SZ_1G) {
 		ret = -E2BIG;
 		goto free_output_rt;
@@ -890,6 +894,8 @@ static int __qcom_scm_pas_auth_and_reset(struct device *dev, u32 pas_id)
 
 	ret = qcom_scm_call(dev, &desc, &res);
 	qcom_scm_bw_disable();
+	pr_err("pil_dbg: %s: pas_id=%u ret=%d result[0]=%llu\n", __func__,
+	       pas_id, ret, res.result[0]);
 
 disable_clk:
 	qcom_scm_clk_disable();
@@ -926,6 +932,8 @@ static int __qcom_scm_pas_prepare_and_auth_reset(struct device *dev,
 		return ret;
 
 	ret = __qcom_scm_pas_auth_and_reset(dev, ctx->pas_id);
+	pr_err("pil_dbg: %s: pas_id=%u auth_and_reset ret=%d\n", __func__,
+	       ctx->pas_id, ret);
 	qcom_tzmem_shm_bridge_delete(handle);
 
 	return ret;
@@ -953,6 +961,8 @@ static int __qcom_scm_pas_set_remote_state(struct device *dev, u32 state,
 	int ret;
 
 	ret = qcom_scm_call(dev, &desc, &res);
+	pr_err("pil_dbg: %s: pas_id=%u state=%u ret=%d result[0]=%llu\n",
+	       __func__, pas_id, state, ret, res.result[0]);
 
 	return ret ? : res.result[0];
 }
@@ -985,6 +995,8 @@ static int __qcom_scm_pas_shutdown(struct device *dev, u32 pas_id)
 
 	ret = qcom_scm_call(dev, &desc, &res);
 	qcom_scm_bw_disable();
+	pr_err("pil_dbg: %s: pas_id=%u ret=%d result[0]=%llu\n", __func__,
+	       pas_id, ret, res.result[0]);
 
 disable_clk:
 	qcom_scm_clk_disable();
@@ -1011,10 +1023,15 @@ static bool __qcom_scm_pas_supported(struct device *dev, u32 pas_id)
 	struct qcom_scm_res res;
 
 	if (!__qcom_scm_is_call_available(dev, QCOM_SCM_SVC_PIL,
-					  QCOM_SCM_PIL_PAS_IS_SUPPORTED))
+					  QCOM_SCM_PIL_PAS_IS_SUPPORTED)) {
+		pr_err("pil_dbg: %s: pas_id=%u IS_SUPPORTED call unavailable\n",
+		       __func__, pas_id);
 		return false;
+	}
 
 	ret = qcom_scm_call(dev, &desc, &res);
+	pr_err("pil_dbg: %s: pas_id=%u ret=%d result[0]=%llu\n", __func__,
+	       pas_id, ret, res.result[0]);
 
 	return ret ? false : !!res.result[0];
 }
@@ -2385,7 +2402,11 @@ int qcom_scm_qtee_invoke_smc(phys_addr_t inbuf, size_t inbuf_size,
 	struct qcom_scm_res res;
 	int ret;
 
+	pr_err("pil_dbg: %s: calling SVC_SMCINVOKE/INVOKE owner=TRUSTED_OS inbuf=%pa/%zu outbuf=%pa/%zu\n",
+	       __func__, &inbuf, inbuf_size, &outbuf, outbuf_size);
 	ret = qcom_scm_call(__scm->dev, &desc, &res);
+	pr_err("pil_dbg: %s: qcom_scm_call returned %d, res.result[0]=0x%llx res.result[1]=0x%llx\n",
+	       __func__, ret, res.result[0], res.result[1]);
 	if (ret)
 		return ret;
 
@@ -2424,7 +2445,11 @@ int qcom_scm_qtee_callback_response(phys_addr_t buf, size_t buf_size,
 	struct qcom_scm_res res;
 	int ret;
 
+	pr_err("pil_dbg: %s: calling SVC_SMCINVOKE/CB_RSP owner=TRUSTED_OS buf=%pa/%zu\n",
+	       __func__, &buf, buf_size);
 	ret = qcom_scm_call(__scm->dev, &desc, &res);
+	pr_err("pil_dbg: %s: qcom_scm_call returned %d, res.result[0]=0x%llx res.result[1]=0x%llx\n",
+	       __func__, ret, res.result[0], res.result[1]);
 	if (ret)
 		return ret;
 

@@ -67,10 +67,21 @@ EXPORT_SYMBOL_GPL(devm_qcom_pas_context_alloc);
 int qcom_pas_init_image(u32 pas_id, const void *metadata, size_t size,
 			struct qcom_pas_context *ctx)
 {
-	if (!ops_ptr)
-		return -ENODEV;
+	int ret;
 
-	return ops_ptr->init_image(ops_ptr->dev, pas_id, metadata, size, ctx);
+	if (!ops_ptr) {
+		pr_err("pil_dbg: %s: no PAS backend registered, pas_id=%u\n",
+		       __func__, pas_id);
+		return -ENODEV;
+	}
+
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, pas_id);
+	ret = ops_ptr->init_image(ops_ptr->dev, pas_id, metadata, size, ctx);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_init_image);
 
@@ -83,7 +94,11 @@ void qcom_pas_metadata_release(struct qcom_pas_context *ctx)
 	if (!ops_ptr || !ctx || !ctx->ptr)
 		return;
 
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, ctx->pas_id);
 	ops_ptr->metadata_release(ops_ptr->dev, ctx);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u done\n",
+	       __func__, ops_ptr->drv_name, ctx->pas_id);
 }
 EXPORT_SYMBOL_GPL(qcom_pas_metadata_release);
 
@@ -98,10 +113,21 @@ EXPORT_SYMBOL_GPL(qcom_pas_metadata_release);
  */
 int qcom_pas_mem_setup(u32 pas_id, phys_addr_t addr, phys_addr_t size)
 {
-	if (!ops_ptr)
-		return -ENODEV;
+	int ret;
 
-	return ops_ptr->mem_setup(ops_ptr->dev, pas_id, addr, size);
+	if (!ops_ptr) {
+		pr_err("pil_dbg: %s: no PAS backend registered, pas_id=%u\n",
+		       __func__, pas_id);
+		return -ENODEV;
+	}
+
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, pas_id);
+	ret = ops_ptr->mem_setup(ops_ptr->dev, pas_id, addr, size);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_mem_setup);
 
@@ -150,13 +176,22 @@ struct resource_table *qcom_pas_get_rsc_table(struct qcom_pas_context *ctx,
 					      size_t input_rt_size,
 					      size_t *output_rt_size)
 {
+	struct resource_table *ret;
+
 	if (!ops_ptr)
 		return ERR_PTR(-ENODEV);
 	if (!ctx)
 		return ERR_PTR(-EINVAL);
 
-	return ops_ptr->get_rsc_table(ops_ptr->dev, ctx, input_rt,
-				      input_rt_size, output_rt_size);
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, ctx->pas_id);
+	ret = ops_ptr->get_rsc_table(ops_ptr->dev, ctx, input_rt,
+				     input_rt_size, output_rt_size);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %ld\n",
+	       __func__, ops_ptr->drv_name, ctx->pas_id,
+	       IS_ERR(ret) ? PTR_ERR(ret) : 0);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_get_rsc_table);
 
@@ -169,10 +204,21 @@ EXPORT_SYMBOL_GPL(qcom_pas_get_rsc_table);
  */
 int qcom_pas_auth_and_reset(u32 pas_id)
 {
-	if (!ops_ptr)
-		return -ENODEV;
+	int ret;
 
-	return ops_ptr->auth_and_reset(ops_ptr->dev, pas_id);
+	if (!ops_ptr) {
+		pr_err("pil_dbg: %s: no PAS backend registered, pas_id=%u\n",
+		       __func__, pas_id);
+		return -ENODEV;
+	}
+
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, pas_id);
+	ret = ops_ptr->auth_and_reset(ops_ptr->dev, pas_id);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_auth_and_reset);
 
@@ -197,12 +243,20 @@ EXPORT_SYMBOL_GPL(qcom_pas_auth_and_reset);
  */
 int qcom_pas_prepare_and_auth_reset(struct qcom_pas_context *ctx)
 {
+	int ret;
+
 	if (!ops_ptr)
 		return -ENODEV;
 	if (!ctx)
 		return -EINVAL;
 
-	return ops_ptr->prepare_and_auth_reset(ops_ptr->dev, ctx);
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, ctx->pas_id);
+	ret = ops_ptr->prepare_and_auth_reset(ops_ptr->dev, ctx);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, ctx->pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_prepare_and_auth_reset);
 
@@ -215,10 +269,21 @@ EXPORT_SYMBOL_GPL(qcom_pas_prepare_and_auth_reset);
  */
 int qcom_pas_set_remote_state(u32 state, u32 pas_id)
 {
-	if (!ops_ptr)
-		return -ENODEV;
+	int ret;
 
-	return ops_ptr->set_remote_state(ops_ptr->dev, state, pas_id);
+	if (!ops_ptr) {
+		pr_err("pil_dbg: %s: no PAS backend registered, pas_id=%u\n",
+		       __func__, pas_id);
+		return -ENODEV;
+	}
+
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u state=%u\n",
+	       __func__, ops_ptr->drv_name, pas_id, state);
+	ret = ops_ptr->set_remote_state(ops_ptr->dev, state, pas_id);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_set_remote_state);
 
@@ -230,10 +295,21 @@ EXPORT_SYMBOL_GPL(qcom_pas_set_remote_state);
  */
 int qcom_pas_shutdown(u32 pas_id)
 {
-	if (!ops_ptr)
-		return -ENODEV;
+	int ret;
 
-	return ops_ptr->shutdown(ops_ptr->dev, pas_id);
+	if (!ops_ptr) {
+		pr_err("pil_dbg: %s: no PAS backend registered, pas_id=%u\n",
+		       __func__, pas_id);
+		return -ENODEV;
+	}
+
+	pr_err("pil_dbg: %s: dispatching to backend=%s pas_id=%u\n",
+	       __func__, ops_ptr->drv_name, pas_id);
+	ret = ops_ptr->shutdown(ops_ptr->dev, pas_id);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_shutdown);
 
@@ -246,10 +322,19 @@ EXPORT_SYMBOL_GPL(qcom_pas_shutdown);
  */
 bool qcom_pas_supported(u32 pas_id)
 {
-	if (!ops_ptr)
-		return false;
+	bool ret;
 
-	return ops_ptr->supported(ops_ptr->dev, pas_id);
+	if (!ops_ptr) {
+		pr_err("pil_dbg: %s: no PAS backend registered, pas_id=%u\n",
+		       __func__, pas_id);
+		return false;
+	}
+
+	ret = ops_ptr->supported(ops_ptr->dev, pas_id);
+	pr_err("pil_dbg: %s: backend=%s pas_id=%u returned %d\n",
+	       __func__, ops_ptr->drv_name, pas_id, ret);
+
+	return ret;
 }
 EXPORT_SYMBOL_GPL(qcom_pas_supported);
 
@@ -286,17 +371,24 @@ EXPORT_SYMBOL_GPL(qcom_pas_is_available);
 
 void qcom_pas_ops_register(struct qcom_pas_ops *ops)
 {
-	if (!qcom_pas_is_available())
+	if (!qcom_pas_is_available()) {
 		/* Paired with smp_load_acquire() in qcom_pas_is_available() */
 		smp_store_release(&ops_ptr, ops);
-	else
+		pr_err("pil_dbg: %s: registered backend=%s\n", __func__,
+		       ops->drv_name);
+	} else {
 		pr_err("qcom_pas: ops already registered by %s\n",
 		       ops_ptr->drv_name);
+		pr_err("pil_dbg: %s: rejected backend=%s, already have %s\n",
+		       __func__, ops->drv_name, ops_ptr->drv_name);
+	}
 }
 EXPORT_SYMBOL_GPL(qcom_pas_ops_register);
 
 void qcom_pas_ops_unregister(void)
 {
+	pr_err("pil_dbg: %s: unregistering backend=%s\n", __func__,
+	       ops_ptr ? ops_ptr->drv_name : "none");
 	/* Paired with smp_load_acquire() in qcom_pas_is_available() */
 	smp_store_release(&ops_ptr, NULL);
 }
