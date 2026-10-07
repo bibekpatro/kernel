@@ -238,6 +238,11 @@
 	};
 
 	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+
 		scm {
 			compatible = "qcom,scm-shikra", "qcom,scm";
 			clocks = <&rpmcc RPM_SMD_CE1_CLK>;
@@ -4607,6 +4612,7 @@
 			clocks = <&rpmcc RPM_SMD_QDSS_CLK>;
 			clock-names = "apb_pclk";
 			label = "cti_riscv";
+			status = "disabled";
 		};
 
 		tpdm@9860000 {
