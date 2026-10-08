@@ -1517,7 +1517,7 @@ static const struct qcom_pas_data shikra_cdsp_resource = {
 	.firmware_name = "cdsp.mbn",
 	.pas_id = 18,
 	.minidump_id = 7,
-	.auto_boot = true,
+	.auto_boot = false,
 	.proxy_pd_names = (char *[]){
 		"cx",
 		NULL
@@ -1536,7 +1536,7 @@ static const struct qcom_pas_data shikra_lpaicp_resource = {
 	.pas_id = 0x56,
 	.dtb_pas_id = 0x57,
 	.minidump_id = 0,
-	.auto_boot = true,
+	.auto_boot = false,
 	.ssr_name = "lpaicp",
 	.sysmon_name = "lpaicp",
 };
