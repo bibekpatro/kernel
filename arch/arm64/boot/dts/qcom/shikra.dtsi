@@ -250,6 +250,11 @@
 	};
 
 	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+
 		scm {
 			compatible = "qcom,scm-shikra", "qcom,scm";
 			clocks = <&rpmcc RPM_SMD_CE1_CLK>;
