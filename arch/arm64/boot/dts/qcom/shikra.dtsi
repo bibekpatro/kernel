@@ -2113,6 +2113,9 @@
 				     <GIC_SPI 148 IRQ_TYPE_LEVEL_HIGH 0>,
 				     <GIC_SPI 149 IRQ_TYPE_LEVEL_HIGH 0>,
 				     <GIC_SPI 150 IRQ_TYPE_LEVEL_HIGH 0>;
+
+			/* Preserve bootloader display stream mapping for seamless splash */
+			qcom,handoff-smrs = <0x420 0x2>;
 		};
 
 		wifi: wifi@c800000 {

@@ -1655,6 +1655,90 @@ static const struct iommu_ops arm_smmu_ops = {
 	}
 };
 
+static int arm_smmu_handoff_cbs(struct arm_smmu_device *smmu)
+{
+	u32 i, smr, s2cr;
+	u32 index;
+	struct arm_smmu_smr smrs;
+	struct arm_smmu_smr *handoff_smrs;
+	int num_handoff_smrs;
+	const __be32 *cell;
+
+	if (!smmu->smrs)
+		return 0;
+
+	cell = of_get_property(smmu->dev->of_node, "qcom,handoff-smrs", NULL);
+	if (!cell)
+		return 0;
+
+	num_handoff_smrs = of_property_count_elems_of_size(smmu->dev->of_node,
+					"qcom,handoff-smrs", sizeof(u32) * 2);
+	if (num_handoff_smrs < 0)
+		return 0;
+
+	handoff_smrs = kcalloc(num_handoff_smrs, sizeof(*handoff_smrs), GFP_KERNEL);
+	if (!handoff_smrs)
+		return -ENOMEM;
+
+	for (i = 0; i < num_handoff_smrs; i++) {
+		handoff_smrs[i].id   = of_read_number(cell++, 1);
+		handoff_smrs[i].mask = of_read_number(cell++, 1);
+		handoff_smrs[i].valid = true;
+	}
+
+	for (i = 0; i < smmu->num_mapping_groups; ++i) {
+		smr = arm_smmu_gr0_read(smmu, ARM_SMMU_GR0_SMR(i));
+
+		if (smmu->features & ARM_SMMU_FEAT_EXIDS) {
+			s2cr = arm_smmu_gr0_read(smmu, ARM_SMMU_GR0_S2CR(i));
+			smrs.valid = FIELD_GET(ARM_SMMU_S2CR_EXIDVALID, s2cr);
+			if (!smrs.valid)
+				continue;
+			smrs.id   = FIELD_GET(ARM_SMMU_SMR_ID, smr);
+			smrs.mask = FIELD_GET(ARM_SMMU_SMR_MASK, smr);
+		} else {
+			smrs.valid = FIELD_GET(ARM_SMMU_SMR_VALID, smr);
+			if (!smrs.valid)
+				continue;
+			smrs.id   = FIELD_GET(ARM_SMMU_SMR_ID, smr);
+			smrs.mask = FIELD_GET(ARM_SMMU_SMR_MASK,
+					      smr & ~ARM_SMMU_SMR_VALID);
+		}
+
+		for (index = 0; index < num_handoff_smrs; index++) {
+			if (!handoff_smrs[index].valid)
+				continue;
+
+			if ((handoff_smrs[index].mask & smrs.mask) == smrs.mask &&
+			    !((handoff_smrs[index].id ^ smrs.id) & ~handoff_smrs[index].mask)) {
+				dev_dbg(smmu->dev,
+					"handoff-smrs match idx %d, id 0x%x, mask 0x%x\n",
+					i, smrs.id, smrs.mask);
+
+				s2cr = arm_smmu_gr0_read(smmu, ARM_SMMU_GR0_S2CR(i));
+
+				smmu->smrs[i] = smrs;
+				smmu->smrs[i].pinned = true;
+
+				smmu->s2crs[i].group  = NULL;
+				smmu->s2crs[i].count  = 0;
+				smmu->s2crs[i].type    = FIELD_GET(ARM_SMMU_S2CR_TYPE, s2cr);
+				smmu->s2crs[i].privcfg = FIELD_GET(ARM_SMMU_S2CR_PRIVCFG, s2cr);
+				smmu->s2crs[i].cbndx   = FIELD_GET(ARM_SMMU_S2CR_CBNDX, s2cr);
+
+				bitmap_set(smmu->context_map, smmu->s2crs[i].cbndx, 1);
+				bitmap_set(smmu->handoff_context_map, smmu->s2crs[i].cbndx, 1);
+
+				handoff_smrs[index].valid = false;
+				break;
+			}
+		}
+	}
+
+	kfree(handoff_smrs);
+	return 0;
+}
+
 static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 {
 	int i;
@@ -1673,6 +1757,15 @@ static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 
 	/* Make sure all context banks are disabled and clear CB_FSR  */
 	for (i = 0; i < smmu->num_context_banks; ++i) {
+		/*
+		 * Skip handoff CBs reserved by the bootloader (in context_map
+		 * but with no kernel domain). Disabling them would fault every
+		 * in-flight DMA transaction (e.g. display splash), causing
+		 * continuous SMMU faults and RPM imbalance.  The kernel driver
+		 * will reprogram these CBs when it attaches its own domain.
+		 */
+		if (test_bit(i, smmu->handoff_context_map) && !smmu->cbs[i].cfg)
+			continue;
 		arm_smmu_write_context_bank(smmu, i);
 		arm_smmu_cb_write(smmu, i, ARM_SMMU_CB_FSR, ARM_SMMU_CB_FSR_FAULT);
 	}
@@ -2223,6 +2316,10 @@ static int arm_smmu_device_probe(struct platform_device *pdev)
 
 	/* Check for RMRs and install bypass SMRs if any */
 	arm_smmu_rmr_install_bypass_smr(smmu);
+
+	err = arm_smmu_handoff_cbs(smmu);
+	if (err)
+		return err;
 
 	arm_smmu_device_reset(smmu);
 	arm_smmu_test_smr_masks(smmu);
