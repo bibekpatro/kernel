@@ -847,3 +847,8 @@
 		output-high;
 	};
 };
+
+&apps_smmu {
+	/* Preserve bootloader display stream mapping for seamless splash */
+	qcom,handoff-smrs = <0x420 0x2>;
+};
