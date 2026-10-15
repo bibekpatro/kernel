@@ -80,6 +80,10 @@ static inline int arm_smmu_rpm_get(struct arm_smmu_device *smmu)
 static inline void arm_smmu_rpm_put(struct arm_smmu_device *smmu)
 {
 	if (pm_runtime_enabled(smmu->dev)) {
+		if (WARN(atomic_read(&smmu->dev->power.usage_count) <= 0,
+			 "arm-smmu: rpm_put underflow (count=%d)\n",
+			 atomic_read(&smmu->dev->power.usage_count)))
+			return;
 		pm_runtime_mark_last_busy(smmu->dev);
 		__pm_runtime_put_autosuspend(smmu->dev);
 
