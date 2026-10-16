@@ -1092,6 +1092,7 @@ static int rpm_drop_usage_count(struct device *dev)
 	 */
 	atomic_inc(&dev->power.usage_count);
 	dev_warn(dev, "Runtime PM usage count underflow!\n");
+	dump_stack();
 	return -EINVAL;
 }
 
